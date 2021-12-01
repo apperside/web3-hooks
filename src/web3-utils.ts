@@ -1,16 +1,18 @@
+window.ethereum = window.ethereum || {}
+
 export const isWeb3 = () => {
-  return typeof window.ethereum !== 'undefined' ? true : false
+  return typeof window.ethereum !== 'undefined'
 }
 
 export const isMetaMask = () => {
-  return window.ethereum.isMetaMask ? true : false
+  return !!window.ethereum.isMetaMask
 }
 
 // return account if connected
 export const getAccounts = async () => {
   try {
     return await window.ethereum.request({
-      method: 'eth_accounts',
+      method: 'eth_accounts'
     })
   } catch (e) {
     throw e
@@ -21,14 +23,14 @@ export const getAccounts = async () => {
 export const loginToMetaMask = async () => {
   try {
     return await window.ethereum.request({
-      method: 'eth_requestAccounts',
+      method: 'eth_requestAccounts'
     })
   } catch (e) {
     throw e
   }
 }
 
-export const chainIdtoName = (chainId) => {
+export const chainIdtoName = (chainId: number) => {
   switch (chainId) {
     case 1:
       return 'Mainnet'
@@ -45,8 +47,8 @@ export const chainIdtoName = (chainId) => {
   }
 }
 
-export const isConnected = () => {}
+export const isConnected = () => { }
 
-export const connect = () => {}
+export const connect = () => { }
 
-export const disconnect = () => {}
+export const disconnect = () => { }

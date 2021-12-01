@@ -1,17 +1,28 @@
 // export Web3 provider
 // export useWeb3()
-import React, { useCallback, useEffect, useReducer } from 'react'
-import { ethers } from 'ethers'
+import React, { Reducer, useCallback, useEffect, useReducer } from 'react'
+import { BigNumber, ethers } from 'ethers'
 import {
   isWeb3,
   isMetaMask,
   getAccounts,
   loginToMetaMask,
-  chainIdtoName,
+  chainIdtoName
 } from './web3-utils'
-
+export type Web3State = {
+  isWeb3: boolean,
+  isLogged: boolean,
+  isMetaMask: boolean,
+  account: string,
+  balance: number,
+  chainId: number,
+  networkName: string & "unknown",
+  eth_balance: BigNumber,
+  signer?: ethers.providers.JsonRpcSigner,
+  provider?: ethers.providers.Web3Provider,
+}
 // web3 reducer
-const web3Reducer = (state, action) => {
+const web3Reducer = (state: Web3State, action: any) => {
   switch (action.type) {
     case 'SET_isWeb3':
       return { ...state, isWeb3: action.isWeb3 }
@@ -37,7 +48,7 @@ const web3Reducer = (state, action) => {
 }
 
 // web3 initial state
-const web3InitialState = {
+const web3InitialState: Web3State = {
   isWeb3: false,
   isLogged: false,
   isMetaMask: false,
@@ -45,14 +56,12 @@ const web3InitialState = {
   balance: 0,
   chainId: 0,
   networkName: 'unknown',
-  eth_balance: ethers.utils.parseEther('0'),
-  signer: null,
-  provider: null,
+  eth_balance: ethers.utils.parseEther('0')
 }
 
 // web3 hook
-export const useWeb3 = (endpoint) => {
-  const [web3State, web3Dispatch] = useReducer(web3Reducer, web3InitialState)
+export const useWeb3 = (): Web3State & { login: () => Promise<void> } => {
+  const [web3State, web3Dispatch] = useReducer<Reducer<Web3State, any>>(web3Reducer, web3InitialState)
 
   // login in to MetaMask manually.
   // TODO: Check for login on other wallet
@@ -82,18 +91,18 @@ export const useWeb3 = (endpoint) => {
     if (web3State.isWeb3) {
       console.log('network listener called')
 
-      const onChainChanged = async (chainId) => {
-        const _chainId = parseInt(Number(chainId), 10)
+      const onChainChanged = async (chainId: string) => {
+        const _chainId = parseInt(chainId, 10)
         const _networkName = chainIdtoName(_chainId)
         console.log('network id changed:', _chainId)
         console.log('network name changed:', _networkName)
         web3Dispatch({
           type: 'SET_chainId',
-          chainId: _chainId,
+          chainId: _chainId
         })
         web3Dispatch({
           type: 'SET_networkName',
-          networkName: _networkName,
+          networkName: _networkName
         })
       }
       window.ethereum.on('chainChanged', onChainChanged)
@@ -110,7 +119,7 @@ export const useWeb3 = (endpoint) => {
 
   // check if logged in to metamask and get account
   useEffect(() => {
-    ;(async () => {
+    (async () => {
       if (web3State.isWeb3) {
         try {
           const accounts = await getAccounts()
@@ -119,7 +128,7 @@ export const useWeb3 = (endpoint) => {
             web3Dispatch({ type: 'SET_isLogged', isLogged: false })
             web3Dispatch({
               type: 'SET_account',
-              account: web3InitialState.account,
+              account: web3InitialState.account
             })
           } else {
             // Already logged
@@ -136,7 +145,7 @@ export const useWeb3 = (endpoint) => {
   // Listen for addresses change event
   useEffect(() => {
     if (web3State.isWeb3) {
-      const onAccountsChanged = (accounts) => {
+      const onAccountsChanged = (accounts: any[]) => {
         console.log('account changed')
         web3Dispatch({ type: 'SET_account', account: accounts[0] })
       }
@@ -155,7 +164,7 @@ export const useWeb3 = (endpoint) => {
     } else {
       web3Dispatch({
         type: 'SET_provider',
-        provider: web3InitialState.provider,
+        provider: web3InitialState.provider
       })
       web3Dispatch({ type: 'SET_signer', signer: web3InitialState.signer })
     }
@@ -163,7 +172,7 @@ export const useWeb3 = (endpoint) => {
 
   // Get ETH amount
   useEffect(() => {
-    ;(async () => {
+    (async () => {
       console.log('provider:', web3State.provider)
       if (
         web3State.provider &&
@@ -175,7 +184,7 @@ export const useWeb3 = (endpoint) => {
       } else {
         web3Dispatch({
           type: 'SET_balance',
-          balance: web3InitialState.balance,
+          balance: web3InitialState.balance
         })
       }
     })()
@@ -183,57 +192,66 @@ export const useWeb3 = (endpoint) => {
 
   // Listen for balance change for webState.account
   useEffect(() => {
-    if (web3State.provider) {
+    const { provider } = web3State
+    if (provider) {
       console.log('USEFFECT FOR BALANCE CHANGE')
       console.log('typeof account:', typeof web3State.account)
       console.log('account: ', web3State.account)
 
-      const updateBalance = async (_blockNumber) => {
+      const updateBalance = async (_blockNumber: any) => {
         console.log('NEW BLOCK MINED')
-        const _balance = await web3State.provider.getBalance(web3State.account)
+        const _balance = await provider.getBalance(web3State.account)
         const balance = ethers.utils.formatEther(_balance)
         if (web3State.account !== web3InitialState.account) {
           web3Dispatch({ type: 'SET_balance', balance: balance })
         } else {
           web3Dispatch({
             type: 'SET_balance',
-            balance: web3InitialState.balance,
+            balance: web3InitialState.balance
           })
         }
       }
 
-      web3State.provider.on('block', updateBalance)
+      provider.on('block', updateBalance)
 
-      return () => web3State.provider.off('block', updateBalance)
+      return () => {
+        provider.off('block', updateBalance)
+      }
     }
   }, [web3State.provider, web3State.account])
 
   // GET netword_name and chainId
   useEffect(() => {
-    console.log('GET NETWORK CALLED')
-    ;(async () => {
+    console.log('GET NETWORK CALLED');
+    (async () => {
       if (web3State.provider) {
         const network = await web3State.provider.getNetwork()
         web3Dispatch({ type: 'SET_chainId', chainId: network.chainId })
         web3Dispatch({
           type: 'SET_networkName',
-          networkName: chainIdtoName(network.chainId),
+          networkName: chainIdtoName(network.chainId)
         })
       }
     })()
   }, [web3State.provider])
 
-  return [web3State, login]
+  return {
+    ...web3State,
+    login
+  }
 }
 
+// eslint-disable-next-line no-undef
+type UseWeb3Hook = ReturnType<typeof useWeb3>
 // Web3 context
-export const Web3Context = React.createContext(null)
+// @ts-ignore
+export const Web3Context = React.createContext<UseWeb3Hook>(null)
 
 // Web3 provider
-export const Web3Provider = ({ children }) => {
+export const Web3Provider = ({ children }: { children: any }) => {
   return (
     <>
-      <Web3Context.Provider value={useWeb3()}>{children}</Web3Context.Provider>
+      <Web3Context.Provider value={useWeb3()} > {children} </Web3Context.Provider>
     </>
   )
 }

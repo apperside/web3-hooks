@@ -1,0 +1,21 @@
+import { Contract, ethers } from 'ethers'
+import { useContext, useEffect, useState } from 'react'
+import { Web3Context } from './useWeb3'
+
+export const useContract = <T>({ networks, abi }: any) => {
+  // @ts-ignore
+  const web3State = useContext(Web3Context)
+  const [contract, setContract] = useState<ethers.Contract>()
+  useEffect(() => {
+    if (web3State?.signer && web3State.chainId && abi) {
+      setContract(new ethers.Contract(networks[web3State.chainId]?.address, abi, web3State.signer))
+    } else {
+      setContract(undefined)
+    }
+  }, [web3State?.signer, networks, abi])
+  return contract as unknown as T
+}
+
+export const loadContract = <T>(address: string, abi: any, signer: ethers.providers.JsonRpcSigner) => {
+  return new ethers.Contract(address, abi, signer) as unknown as T
+}
