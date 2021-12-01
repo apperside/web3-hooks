@@ -1,9 +1,8 @@
-import { Contract, ethers } from 'ethers'
+import { ethers } from 'ethers'
 import { useContext, useEffect, useState } from 'react'
 import { Web3Context } from './useWeb3'
 
 export const useContract = <T>({ networks, abi }: any) => {
-  // @ts-ignore
   const web3State = useContext(Web3Context)
   const [contract, setContract] = useState<ethers.Contract>()
   useEffect(() => {

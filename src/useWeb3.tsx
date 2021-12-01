@@ -121,22 +121,18 @@ export const useWeb3 = (): Web3State & { login: () => Promise<void> } => {
   useEffect(() => {
     (async () => {
       if (web3State.isWeb3) {
-        try {
-          const accounts = await getAccounts()
-          if (accounts.length === 0) {
-            // If not logged
-            web3Dispatch({ type: 'SET_isLogged', isLogged: false })
-            web3Dispatch({
-              type: 'SET_account',
-              account: web3InitialState.account
-            })
-          } else {
-            // Already logged
-            web3Dispatch({ type: 'SET_account', account: accounts[0] })
-            web3Dispatch({ type: 'SET_isLogged', isLogged: true })
-          }
-        } catch (e) {
-          throw e
+        const accounts = await getAccounts()
+        if (accounts.length === 0) {
+          // If not logged
+          web3Dispatch({ type: 'SET_isLogged', isLogged: false })
+          web3Dispatch({
+            type: 'SET_account',
+            account: web3InitialState.account
+          })
+        } else {
+          // Already logged
+          web3Dispatch({ type: 'SET_account', account: accounts[0] })
+          web3Dispatch({ type: 'SET_isLogged', isLogged: true })
         }
       }
     })()
@@ -198,7 +194,7 @@ export const useWeb3 = (): Web3State & { login: () => Promise<void> } => {
       console.log('typeof account:', typeof web3State.account)
       console.log('account: ', web3State.account)
 
-      const updateBalance = async (_blockNumber: any) => {
+      const updateBalance = async () => {
         console.log('NEW BLOCK MINED')
         const _balance = await provider.getBalance(web3State.account)
         const balance = ethers.utils.formatEther(_balance)

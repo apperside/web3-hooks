@@ -15,6 +15,7 @@ export const getAccounts = async () => {
       method: 'eth_accounts'
     })
   } catch (e) {
+    console.error("error in getAccounts", e);
     throw e
   }
 }
@@ -26,6 +27,7 @@ export const loginToMetaMask = async () => {
       method: 'eth_requestAccounts'
     })
   } catch (e) {
+    console.error("error in loginToMetaMask", e);
     throw e
   }
 }
@@ -47,8 +49,3 @@ export const chainIdtoName = (chainId: number) => {
   }
 }
 
-export const isConnected = () => { }
-
-export const connect = () => { }
-
-export const disconnect = () => { }
