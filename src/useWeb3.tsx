@@ -108,7 +108,7 @@ export const useWeb3 = (): Web3State & { login: () => Promise<void> } => {
       window?.ethereum.on('chainChanged', onChainChanged)
       return () => window.ethereum?.off('chainChanged', onChainChanged)
     }
-  }, [web3State.isWeb3])
+  }, [web3State.isWeb3, window?.ethereum])
 
   // Check if metamask is installed
   useEffect(() => {
@@ -140,6 +140,7 @@ export const useWeb3 = (): Web3State & { login: () => Promise<void> } => {
 
   // Listen for addresses change event
   useEffect(() => {
+    console.log('account listener called', window.ethereum)
     if (web3State.isWeb3 && window.ethereum) {
       const onAccountsChanged = (accounts: any[]) => {
         console.log('account changed')
@@ -148,7 +149,7 @@ export const useWeb3 = (): Web3State & { login: () => Promise<void> } => {
       window.ethereum?.on('accountsChanged', onAccountsChanged)
       return () => window.ethereum?.off('accountsChanged', onAccountsChanged)
     }
-  }, [web3State.isWeb3])
+  }, [web3State.isWeb3, window.ethereum])
 
   // Connect to provider and signer
   useEffect(() => {
