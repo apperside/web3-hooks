@@ -140,7 +140,7 @@ export const useWeb3 = (): Web3State & { login: () => Promise<void> } => {
 
   // Listen for addresses change event
   useEffect(() => {
-    if (web3State.isWeb3) {
+    if (web3State.isWeb3 && window.ethereum) {
       const onAccountsChanged = (accounts: any[]) => {
         console.log('account changed')
         web3Dispatch({ type: 'SET_account', account: accounts[0] })
