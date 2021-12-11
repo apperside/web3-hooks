@@ -105,8 +105,8 @@ export const useWeb3 = (): Web3State & { login: () => Promise<void> } => {
           networkName: _networkName
         })
       }
-      window.ethereum.on('chainChanged', onChainChanged)
-      return () => window.ethereum.off('chainChanged', onChainChanged)
+      window?.ethereum.on('chainChanged', onChainChanged)
+      return () => window.ethereum?.off('chainChanged', onChainChanged)
     }
   }, [web3State.isWeb3])
 
@@ -145,8 +145,8 @@ export const useWeb3 = (): Web3State & { login: () => Promise<void> } => {
         console.log('account changed')
         web3Dispatch({ type: 'SET_account', account: accounts[0] })
       }
-      window.ethereum.on('accountsChanged', onAccountsChanged)
-      return () => window.ethereum.off('accountsChanged', onAccountsChanged)
+      window.ethereum?.on('accountsChanged', onAccountsChanged)
+      return () => window.ethereum?.off('accountsChanged', onAccountsChanged)
     }
   }, [web3State.isWeb3])
 
