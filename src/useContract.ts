@@ -7,6 +7,7 @@ export const useContract = <T>({ networks, abi }: any) => {
   // const [contract, setContract] = useState<ethers.Contract>()
 
   const contract = useMemo(() => {
+    console.log("[abi, networks, web3State.chainId, web3State.signer] changed", [abi, networks, web3State.chainId, web3State.signer])
     if (web3State?.signer && web3State.chainId && abi) {
       return new ethers.Contract(networks[web3State.chainId]?.address, abi, web3State.signer) as unknown as T
     }
