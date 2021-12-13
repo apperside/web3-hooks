@@ -4,6 +4,7 @@ import { Web3Context } from './useWeb3'
 
 export const useContract = <T>({ networks, abi }: any) => {
   const web3State = useContext(Web3Context)
+  //console.log(web3State);
   // const [contract, setContract] = useState<ethers.Contract>()
 
   const contract = useMemo(() => {

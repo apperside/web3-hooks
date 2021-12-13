@@ -9,7 +9,7 @@ import {
   loginToMetaMask,
   chainIdtoName
 } from './web3-utils'
-import {JsonRpcProvider} from "@ethersproject/providers/src.ts/json-rpc-provider";
+
 export type Web3State = {
   isWeb3: boolean,
   isLogged: boolean,
@@ -35,7 +35,17 @@ const web3Reducer = (state: Web3State, action: any) => {
     case 'SET_account':
       return { ...state, account: action.account }
     case 'SET_provider':
-      return { ...state, provider: action.provider }
+      if (
+        action.provider
+        && action.pollingInterval
+        && action.pollingInterval != action.provider.pollingInterval
+      ) {
+        action.provider.pollingInterval = action.pollingInterval;
+      }
+      return {
+        ...state, provider:
+        action.provider
+      }
     case 'SET_signer':
       return { ...state, signer: action.signer }
     case 'SET_balance':
@@ -48,7 +58,7 @@ const web3Reducer = (state: Web3State, action: any) => {
     {
       const newProvider: any = {...state.provider};
       (newProvider as any).pollingInterval = action.pollingInterval;
-      console.log('SET_pollingInterval', state.provider?.pollingInterval, newProvider.pollingInterval);
+
       return {
         ...state,
         pollingInterval: action.pollingInterval,
@@ -101,7 +111,7 @@ export const useWeb3 = (options?: {pollingInterval: number}): Web3Hook  => {
   // Check if web3 is injected
   // TODO: maybe can check on each render (case of user uninstalling metamasl)
   useEffect(() => {
-    console.log('hooks: isWeb3 called')
+
     web3Dispatch({ type: 'SET_isWeb3', isWeb3: isWeb3() })
   }, [])
 
@@ -238,7 +248,7 @@ export const useWeb3 = (options?: {pollingInterval: number}): Web3Hook  => {
       console.log('account: ', web3State.account)
 
       const updateBalance = async () => {
-        console.log('NEW BLOCK MINED')
+        console.log('NEW BLOCK MINEDD')
         const _balance = await provider.getBalance(web3State.account)
         const balance = ethers.utils.formatEther(_balance)
         if (web3State.account !== web3InitialState.account) {
@@ -252,6 +262,7 @@ export const useWeb3 = (options?: {pollingInterval: number}): Web3Hook  => {
       }
 
       provider.on('block', updateBalance)
+      //provider.on('poll', function(x, y){console.log('polling eventz ', x, y)})
 
       return () => {
         provider.removeListener('block', updateBalance)
