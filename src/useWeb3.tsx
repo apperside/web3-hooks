@@ -9,6 +9,7 @@ import {
   loginToMetaMask,
   chainIdtoName
 } from './web3-utils'
+import {JsonRpcProvider} from "@ethersproject/providers/src.ts/json-rpc-provider";
 export type Web3State = {
   isWeb3: boolean,
   isLogged: boolean,
@@ -17,9 +18,10 @@ export type Web3State = {
   balance: number,
   chainId: number,
   networkName: string & "unknown",
+  pollingInterval: number,
   eth_balance: BigNumber,
   signer?: ethers.providers.JsonRpcSigner,
-  provider?: ethers.providers.Web3Provider,
+  provider?: ethers.providers.Web3Provider
 }
 // web3 reducer
 const web3Reducer = (state: Web3State, action: any) => {
@@ -42,6 +44,17 @@ const web3Reducer = (state: Web3State, action: any) => {
       return { ...state, chainId: action.chainId }
     case 'SET_networkName':
       return { ...state, networkName: action.networkName }
+    case 'SET_pollingInterval':
+    {
+      const newProvider: any = {...state.provider};
+      (newProvider as any).pollingInterval = action.pollingInterval;
+      console.log('SET_pollingInterval', state.provider?.pollingInterval, newProvider.pollingInterval);
+      return {
+        ...state,
+        pollingInterval: action.pollingInterval,
+        provider: newProvider
+      };
+    }
     default:
       throw new Error(`Unhandled action ${action.type} in web3Reducer`)
   }
@@ -56,11 +69,17 @@ const web3InitialState: Web3State = {
   balance: 0,
   chainId: 0,
   networkName: 'unknown',
-  eth_balance: ethers.utils.parseEther('0')
+  eth_balance: ethers.utils.parseEther('0'),
+  pollingInterval: 5000
 }
 
+type Web3Hook = Web3State & {
+  login: () => Promise<void>
+  setPollingInterval: (value: number) => void
+};
+
 // web3 hook
-export const useWeb3 = (options?: { web3SocketAddress?: string }): Web3State & { login: () => Promise<void> } => {
+export const useWeb3 = (options?: {pollingInterval: number}): Web3Hook  => {
   const [web3State, web3Dispatch] = useReducer<Reducer<Web3State, any>>(web3Reducer, web3InitialState)
 
   // login in to MetaMask manually.
@@ -154,7 +173,13 @@ export const useWeb3 = (options?: { web3SocketAddress?: string }): Web3State & {
   // Connect to provider and signer
   useEffect(() => {
     if (web3State.account !== web3InitialState.account) {
-      const provider = options?.web3SocketAddress ? new ethers.providers.WebSocketProvider(options.web3SocketAddress) : new ethers.providers.Web3Provider(window.ethereum)
+      //let provider: ethers.providers.JsonRpcProvider;
+      //try {
+      //  provider = new ethers.providers.WebSocketProvider(window.ethereum)
+      //} catch {
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      provider.pollingInterval = web3State.pollingInterval;
+      //}
       web3Dispatch({ type: 'SET_provider', provider: provider })
       const signer = provider.getSigner()
       web3Dispatch({ type: 'SET_signer', signer: signer })
@@ -166,6 +191,23 @@ export const useWeb3 = (options?: { web3SocketAddress?: string }): Web3State & {
       web3Dispatch({ type: 'SET_signer', signer: web3InitialState.signer })
     }
   }, [web3State.account, web3State.chainId])
+
+  useEffect(() => {
+    if (web3State.pollingInterval != web3InitialState.pollingInterval && web3State.provider) {
+      const provider: any = {...web3State.provider};
+      provider.pollingInterval = web3State.pollingInterval;
+      //const provider = options?.web3SocketAddress ? new ethers.providers.WebSocketProvider(options.web3SocketAddress) : new ethers.providers.Web3Provider(window.ethereum)
+      web3Dispatch({ type: 'SET_provider', provider: provider })
+      const signer = provider.getSigner()
+      web3Dispatch({ type: 'SET_signer', signer: signer })
+    } else {
+      web3Dispatch({
+        type: 'SET_provider',
+        provider: web3InitialState.provider
+      })
+      web3Dispatch({ type: 'SET_signer', signer: web3InitialState.signer })
+    }
+  }, [web3State.pollingInterval])
 
   // Get ETH amount
   useEffect(() => {
@@ -232,10 +274,20 @@ export const useWeb3 = (options?: { web3SocketAddress?: string }): Web3State & {
     })()
   }, [web3State.provider])
 
+  const setPollingInterval = (value: number) => {
+    web3Dispatch(
+      {
+        type: 'SET_pollingInterval',
+        pollingInterval: value
+      }
+    )
+  }
+
   return {
     ...web3State,
-    login
-  }
+    login,
+    setPollingInterval
+  } as Web3Hook
 }
 
 // eslint-disable-next-line no-undef
