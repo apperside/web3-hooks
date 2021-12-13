@@ -3,6 +3,7 @@ import { useContext, useEffect, useState } from 'react'
 import { Web3Context } from './useWeb3'
 
 export const useContract = <T>({ networks, abi }: any) => {
+  console.log('Prova useContract')
   const web3State = useContext(Web3Context)
   const [contract, setContract] = useState<ethers.Contract>()
   useEffect(() => {
