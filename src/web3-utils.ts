@@ -5,13 +5,13 @@ export const isWeb3 = () => {
 }
 
 export const isMetaMask = () => {
-  return !!window.ethereum.isMetaMask
+  return !!window.ethereum?.isMetaMask
 }
 
 // return account if connected
 export const getAccounts = async () => {
   try {
-    return await window.ethereum.request({
+    return await window.ethereum?.request({
       method: 'eth_accounts'
     })
   } catch (e) {
@@ -23,7 +23,7 @@ export const getAccounts = async () => {
 // login attempt, is succcess return array of account
 export const loginToMetaMask = async () => {
   try {
-    return await window.ethereum.request({
+    return await window.ethereum?.request({
       method: 'eth_requestAccounts'
     })
   } catch (e) {

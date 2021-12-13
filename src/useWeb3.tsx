@@ -60,7 +60,7 @@ const web3InitialState: Web3State = {
 }
 
 // web3 hook
-export const useWeb3 = (): Web3State & { login: () => Promise<void> } => {
+export const useWeb3 = (options?: { web3SocketAddress?: string }): Web3State & { login: () => Promise<void> } => {
   const [web3State, web3Dispatch] = useReducer<Reducer<Web3State, any>>(web3Reducer, web3InitialState)
 
   // login in to MetaMask manually.
@@ -105,10 +105,10 @@ export const useWeb3 = (): Web3State & { login: () => Promise<void> } => {
           networkName: _networkName
         })
       }
-      window.ethereum.on('chainChanged', onChainChanged)
-      return () => window.ethereum.off('chainChanged', onChainChanged)
+      window?.ethereum.on('chainChanged', onChainChanged)
+      return () => window.ethereum?.removeListener('chainChanged', onChainChanged)
     }
-  }, [web3State.isWeb3])
+  }, [web3State.isWeb3, window?.ethereum])
 
   // Check if metamask is installed
   useEffect(() => {
@@ -140,20 +140,21 @@ export const useWeb3 = (): Web3State & { login: () => Promise<void> } => {
 
   // Listen for addresses change event
   useEffect(() => {
-    if (web3State.isWeb3) {
+    console.log('account listener called', window.ethereum)
+    if (web3State.isWeb3 && window.ethereum) {
       const onAccountsChanged = (accounts: any[]) => {
         console.log('account changed')
         web3Dispatch({ type: 'SET_account', account: accounts[0] })
       }
-      window.ethereum.on('accountsChanged', onAccountsChanged)
-      return () => window.ethereum.off('accountsChanged', onAccountsChanged)
+      window.ethereum?.on('accountsChanged', onAccountsChanged)
+      return () => window.ethereum?.removeListener('accountsChanged', onAccountsChanged)
     }
-  }, [web3State.isWeb3])
+  }, [web3State.isWeb3, window.ethereum])
 
   // Connect to provider and signer
   useEffect(() => {
     if (web3State.account !== web3InitialState.account) {
-      const provider = new ethers.providers.Web3Provider(window.ethereum)
+      const provider = options?.web3SocketAddress ? new ethers.providers.WebSocketProvider(options.web3SocketAddress) : new ethers.providers.Web3Provider(window.ethereum)
       web3Dispatch({ type: 'SET_provider', provider: provider })
       const signer = provider.getSigner()
       web3Dispatch({ type: 'SET_signer', signer: signer })
@@ -211,7 +212,7 @@ export const useWeb3 = (): Web3State & { login: () => Promise<void> } => {
       provider.on('block', updateBalance)
 
       return () => {
-        provider.off('block', updateBalance)
+        provider.removeListener('block', updateBalance)
       }
     }
   }, [web3State.provider, web3State.account])
