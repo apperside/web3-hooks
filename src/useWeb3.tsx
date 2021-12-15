@@ -203,17 +203,19 @@ export const useWeb3 = (options?: {
 
   // Connect to provider and signer
   useEffect(() => {
-    //(async () => {
-      //lock.acquire('provider', async function() {
     if (web3State.account !== web3InitialState.account && web3State.provider == undefined) {
       const providers = [];
       if (options !== undefined) {
-        for (let _x = 1; _x < options.providerUrls.length; _x++ ) {
+        for (let _x = 0; _x < options.providerUrls.length; _x++) {
           const url = options.providerUrls[_x];
           if (url.startsWith('ws')) {
             providers.push(new ethers.providers.WebSocketProvider(url));
+            console.log('Saving WS provider')
           } else if (url.startsWith('http')) {
-            providers.push(new ethers.providers.JsonRpcProvider(url))
+            const provider = new ethers.providers.JsonRpcProvider(url)
+            provider.pollingInterval = web3State.pollingInterval;
+            providers.push(provider)
+            console.log('Saving RPC provider')
           } else {
             throw Error('Wrong url, must be WS(s) or HTTP(s)')
           }
@@ -235,8 +237,6 @@ export const useWeb3 = (options?: {
       })
       web3Dispatch({ type: 'SET_signer', signer: web3State.signer })
     }
-      //})
-     //})()
   }, [web3State.account, web3State.chainId])
 
   useEffect(() => {
@@ -256,24 +256,24 @@ export const useWeb3 = (options?: {
   }, [web3State.pollingInterval])
 
   // Get amount
-  useEffect(() => {
-    (async () => {
-      //console.log('provider:', web3State.provider)
-      if (
-        web3State.provider &&
-        web3State.account !== web3InitialState.account
-      ) {
-        const _balance = await web3State.provider.getBalance(web3State.account)
-        const balance = ethers.utils.formatEther(_balance)
-        web3Dispatch({ type: 'SET_balance', balance: balance })
-      } else {
-        web3Dispatch({
-          type: 'SET_balance',
-          balance: web3InitialState.balance
-        })
-      }
-    })()
-  }, [web3State.provider, web3State.account])
+  //useEffect(() => {
+  //  (async () => {
+  //    //console.log('provider:', web3State.provider)
+  //    if (
+  //      web3State.provider &&
+  //      web3State.account !== web3InitialState.account
+  //    ) {
+  //      const _balance = await web3State.provider.getBalance(web3State.account)
+  //      const balance = ethers.utils.formatEther(_balance)
+  //      web3Dispatch({ type: 'SET_balance', balance: balance })
+  //    } else {
+  //      web3Dispatch({
+  //        type: 'SET_balance',
+  //        balance: web3InitialState.balance
+  //      })
+  //    }
+  //  })()
+  //}, [web3State.provider, web3State.account])
 
   // Listen for balance change for webState.account
   useEffect(() => {
@@ -283,36 +283,21 @@ export const useWeb3 = (options?: {
       //console.log('typeof account:', typeof web3State.account)
       //console.log('account: ', web3State.account)
 
-      const setBlockAndBalance = async (blockNumber: number) => {
+      const setCurrentBlock = async (blockNumber: number) => {
         if (blockNumber <= web3State.currentBlock) {
           return;
         }
         console.log('setBlockAndBalance: ', blockNumber);
-        const _balance = await provider.getBalance(web3State.account)
-        const balance = ethers.utils.formatEther(_balance)
-        if (web3State.account !== web3InitialState.account) {
-          web3Dispatch({ type: 'SET_balance', balance: balance })
-        } else {
-          web3Dispatch({
-            type: 'SET_balance',
-            balance: web3InitialState.balance
-          })
-        }
-        web3Dispatch(
-          {
-            type: 'SET_currentBlock',
-            currentBlock: blockNumber
-          }
-        )
+        web3Dispatch({type: 'SET_currentBlock', currentBlock: blockNumber})
       }
 
-      provider.on('block', setBlockAndBalance)
+      provider.on('block', setCurrentBlock)
 
       return () => {
-        provider.removeListener('block', setBlockAndBalance)
+        provider.removeListener('block', setCurrentBlock)
       }
     }
-  }, [web3State.provider, web3State.account])
+  }, [web3State.provider, web3State.account, web3State.currentBlock])
 
   // GET netword_name and chainId
   useEffect(() => {
