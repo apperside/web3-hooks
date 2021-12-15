@@ -22,10 +22,14 @@ export type Web3State = {
   eth_balance: BigNumber,
   signer?: ethers.providers.JsonRpcSigner,
   provider?: ethers.providers.Web3Provider
+  providerUrls: string[],
+  currentBlock: 0
 }
 // web3 reducer
 const web3Reducer = (state: Web3State, action: any) => {
   switch (action.type) {
+    case 'SET_currentBlock':
+      return { ...state, currentBlock: action.currentBlock}
     case 'SET_isWeb3':
       return { ...state, isWeb3: action.isWeb3 }
     case 'SET_isMetaMask':
@@ -43,8 +47,9 @@ const web3Reducer = (state: Web3State, action: any) => {
         action.provider.pollingInterval = action.pollingInterval;
       }
       return {
-        ...state, provider:
-        action.provider
+        ...state,
+        provider: action.provider,
+        providerUrls: action.providerUrls
       }
     case 'SET_signer':
       return { ...state, signer: action.signer }
@@ -80,7 +85,9 @@ const web3InitialState: Web3State = {
   chainId: 0,
   networkName: 'unknown',
   eth_balance: ethers.utils.parseEther('0'),
-  pollingInterval: 5000
+  pollingInterval: 5000,
+  providerUrls: [],
+  currentBlock: 0
 }
 
 type Web3Hook = Web3State & {
@@ -89,7 +96,10 @@ type Web3Hook = Web3State & {
 };
 
 // web3 hook
-export const useWeb3 = (options?: {pollingInterval: number}): Web3Hook  => {
+export const useWeb3 = (options?: {
+  pollingInterval: number,
+  providerUrls: string[]
+}): Web3Hook  => {
   const [web3State, web3Dispatch] = useReducer<Reducer<Web3State, any>>(web3Reducer, web3InitialState)
 
   // login in to MetaMask manually.
@@ -118,13 +128,13 @@ export const useWeb3 = (options?: {pollingInterval: number}): Web3Hook  => {
   // Listen for networks changes events
   useEffect(() => {
     if (web3State.isWeb3) {
-      console.log('network listener called')
+      //console.log('network listener called')
 
       const onChainChanged = async (chainId: string) => {
         const _chainId = parseInt(chainId, 10)
         const _networkName = chainIdtoName(_chainId)
-        console.log('network id changed:', _chainId)
-        console.log('network name changed:', _networkName)
+        //console.log('network id changed:', _chainId)
+        //console.log('network name changed:', _networkName)
         web3Dispatch({
           type: 'SET_chainId',
           chainId: _chainId
@@ -169,10 +179,10 @@ export const useWeb3 = (options?: {pollingInterval: number}): Web3Hook  => {
 
   // Listen for addresses change event
   useEffect(() => {
-    console.log('account listener called', window.ethereum)
+    //console.log('account listener called', window.ethereum)
     if (web3State.isWeb3 && window.ethereum) {
       const onAccountsChanged = (accounts: any[]) => {
-        console.log('account changed')
+        //console.log('account changed')
         web3Dispatch({ type: 'SET_account', account: accounts[0] })
       }
       window.ethereum?.on('accountsChanged', onAccountsChanged)
@@ -183,15 +193,26 @@ export const useWeb3 = (options?: {pollingInterval: number}): Web3Hook  => {
   // Connect to provider and signer
   useEffect(() => {
     if (web3State.account !== web3InitialState.account) {
-      //let provider: ethers.providers.JsonRpcProvider;
-      //try {
-      //  provider = new ethers.providers.WebSocketProvider(window.ethereum)
-      //} catch {
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      provider.pollingInterval = web3State.pollingInterval;
-      //}
-      web3Dispatch({ type: 'SET_provider', provider: provider })
-      const signer = provider.getSigner()
+      const providers = [];
+      if (options !== undefined) {
+        for (let _x = 1; _x < options.providerUrls.length; _x++ ) {
+          const url = options.providerUrls[_x];
+          if (url.startsWith('ws')) {
+            providers.push(new ethers.providers.WebSocketProvider(url));
+          } else if (url.startsWith('http')) {
+            providers.push(new ethers.providers.JsonRpcProvider(url))
+          } else {
+            throw Error('Wrong url, must be WS(s) or HTTP(s)')
+          }
+        }
+      }
+      const baseProvider = new ethers.providers.Web3Provider(window.ethereum)
+      if (providers.length === 0) {
+        providers.push(baseProvider)
+      }
+      const provider = new ethers.providers.FallbackProvider(providers, 1);
+      web3Dispatch({ type: 'SET_provider', provider: provider, providerUrls: options?.providerUrls })
+      const signer = baseProvider.getSigner();
       web3Dispatch({ type: 'SET_signer', signer: signer })
     } else {
       web3Dispatch({
@@ -219,10 +240,10 @@ export const useWeb3 = (options?: {pollingInterval: number}): Web3Hook  => {
     }
   }, [web3State.pollingInterval])
 
-  // Get ETH amount
+  // Get amount
   useEffect(() => {
     (async () => {
-      console.log('provider:', web3State.provider)
+      //console.log('provider:', web3State.provider)
       if (
         web3State.provider &&
         web3State.account !== web3InitialState.account
@@ -243,12 +264,12 @@ export const useWeb3 = (options?: {pollingInterval: number}): Web3Hook  => {
   useEffect(() => {
     const { provider } = web3State
     if (provider) {
-      console.log('USEFFECT FOR BALANCE CHANGE')
-      console.log('typeof account:', typeof web3State.account)
-      console.log('account: ', web3State.account)
+      //console.log('USEFFECT FOR BALANCE CHANGE')
+      //console.log('typeof account:', typeof web3State.account)
+      //console.log('account: ', web3State.account)
 
-      const updateBalance = async () => {
-        console.log('NEW BLOCK MINEDD')
+      const setBlockAndBalance = async (blockNumber: number) => {
+        console.log('setBlockAndBalance: ', blockNumber);
         const _balance = await provider.getBalance(web3State.account)
         const balance = ethers.utils.formatEther(_balance)
         if (web3State.account !== web3InitialState.account) {
@@ -259,20 +280,25 @@ export const useWeb3 = (options?: {pollingInterval: number}): Web3Hook  => {
             balance: web3InitialState.balance
           })
         }
+        web3Dispatch(
+          {
+            type: 'SET_currentBlock',
+            currentBlock: blockNumber
+          }
+        )
       }
 
-      provider.on('block', updateBalance)
-      //provider.on('poll', function(x, y){console.log('polling eventz ', x, y)})
+      provider.on('block', setBlockAndBalance)
 
       return () => {
-        provider.removeListener('block', updateBalance)
+        provider.removeListener('block', setBlockAndBalance)
       }
     }
   }, [web3State.provider, web3State.account])
 
   // GET netword_name and chainId
   useEffect(() => {
-    console.log('GET NETWORK CALLED');
+    //console.log('GET NETWORK CALLED');
     (async () => {
       if (web3State.provider) {
         const network = await web3State.provider.getNetwork()
