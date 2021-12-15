@@ -221,6 +221,7 @@ export const useWeb3 = (options?: {
       })
       web3Dispatch({ type: 'SET_signer', signer: web3InitialState.signer })
     }
+    console.log('Provider set')
   }, [web3State.account, web3State.chainId])
 
   useEffect(() => {
