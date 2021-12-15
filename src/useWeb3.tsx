@@ -1,7 +1,8 @@
 // export Web3 provider
 // export useWeb3()
 import React, { Reducer, useCallback, useEffect, useReducer } from 'react'
-import { BigNumber, ethers } from 'ethers'
+import { BigNumber, ethers } from 'ethers';
+
 import {
   isWeb3,
   isMetaMask,
@@ -9,7 +10,10 @@ import {
   loginToMetaMask,
   chainIdtoName
 } from './web3-utils'
-
+//import AsyncLock from 'async-lock';
+//
+//const lock = new AsyncLock();
+//
 export type Web3State = {
   isWeb3: boolean,
   isLogged: boolean,
@@ -87,12 +91,14 @@ const web3InitialState: Web3State = {
   eth_balance: ethers.utils.parseEther('0'),
   pollingInterval: 5000,
   providerUrls: [],
-  currentBlock: 0
+  currentBlock: 0,
+  provider: undefined
 }
 
 type Web3Hook = Web3State & {
   login: () => Promise<void>
-  setPollingInterval: (value: number) => void
+  setPollingInterval: (value: number) => void,
+  getCurrentBlock: () => number
 };
 
 // web3 hook
@@ -104,6 +110,11 @@ export const useWeb3 = (options?: {
 
   // login in to MetaMask manually.
   // TODO: Check for login on other wallet
+
+  function getCurrentBlock() {
+    return web3State.currentBlock
+  }
+
   const login = useCallback(async () => {
     try {
       if (web3State.isWeb3 && !web3State.isLogged) {
@@ -192,7 +203,9 @@ export const useWeb3 = (options?: {
 
   // Connect to provider and signer
   useEffect(() => {
-    if (web3State.account !== web3InitialState.account) {
+    //(async () => {
+      //lock.acquire('provider', async function() {
+    if (web3State.account !== web3InitialState.account && web3State.provider == undefined) {
       const providers = [];
       if (options !== undefined) {
         for (let _x = 1; _x < options.providerUrls.length; _x++ ) {
@@ -214,21 +227,22 @@ export const useWeb3 = (options?: {
       web3Dispatch({ type: 'SET_provider', provider: provider, providerUrls: options?.providerUrls })
       const signer = baseProvider.getSigner();
       web3Dispatch({ type: 'SET_signer', signer: signer })
+      console.log('Provider set')
     } else {
       web3Dispatch({
         type: 'SET_provider',
-        provider: web3InitialState.provider
+        provider: web3State.provider
       })
-      web3Dispatch({ type: 'SET_signer', signer: web3InitialState.signer })
+      web3Dispatch({ type: 'SET_signer', signer: web3State.signer })
     }
-    console.log('Provider set')
+      //})
+     //})()
   }, [web3State.account, web3State.chainId])
 
   useEffect(() => {
     if (web3State.pollingInterval != web3InitialState.pollingInterval && web3State.provider) {
       const provider: any = {...web3State.provider};
       provider.pollingInterval = web3State.pollingInterval;
-      //const provider = options?.web3SocketAddress ? new ethers.providers.WebSocketProvider(options.web3SocketAddress) : new ethers.providers.Web3Provider(window.ethereum)
       web3Dispatch({ type: 'SET_provider', provider: provider })
       const signer = provider.getSigner()
       web3Dispatch({ type: 'SET_signer', signer: signer })
@@ -327,7 +341,8 @@ export const useWeb3 = (options?: {
   return {
     ...web3State,
     login,
-    setPollingInterval
+    setPollingInterval,
+    getCurrentBlock
   } as Web3Hook
 }
 
@@ -338,10 +353,10 @@ type UseWeb3Hook = ReturnType<typeof useWeb3>
 export const Web3Context = React.createContext<UseWeb3Hook>(null)
 
 // Web3 provider
-export const Web3Provider = ({ children }: { children: any }) => {
+export const Web3Provider = ( {children, options}: {children: any, options: any}) => {
   return (
     <>
-      <Web3Context.Provider value={useWeb3()} > {children} </Web3Context.Provider>
+      <Web3Context.Provider value={useWeb3(options)} > {children} </Web3Context.Provider>
     </>
   )
 }
