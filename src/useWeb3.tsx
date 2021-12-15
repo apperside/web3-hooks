@@ -23,7 +23,7 @@ export type Web3State = {
   signer?: ethers.providers.JsonRpcSigner,
   provider?: ethers.providers.Web3Provider
   providerUrls: string[],
-  currentBlock: 0
+  currentBlock: number
 }
 // web3 reducer
 const web3Reducer = (state: Web3State, action: any) => {
@@ -269,6 +269,9 @@ export const useWeb3 = (options?: {
       //console.log('account: ', web3State.account)
 
       const setBlockAndBalance = async (blockNumber: number) => {
+        if (blockNumber < web3State.currentBlock) {
+          return;
+        }
         console.log('setBlockAndBalance: ', blockNumber);
         const _balance = await provider.getBalance(web3State.account)
         const balance = ethers.utils.formatEther(_balance)
