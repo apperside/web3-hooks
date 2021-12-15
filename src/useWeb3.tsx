@@ -270,7 +270,7 @@ export const useWeb3 = (options?: {
       //console.log('account: ', web3State.account)
 
       const setBlockAndBalance = async (blockNumber: number) => {
-        if (blockNumber < web3State.currentBlock) {
+        if (blockNumber <= web3State.currentBlock) {
           return;
         }
         console.log('setBlockAndBalance: ', blockNumber);
