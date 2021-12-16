@@ -51,7 +51,7 @@ const web3Reducer = (state: Web3State, action: any) => {
       return { ...state, signer: action.signer }
     case 'SET_balance':
       console.log('SET_balance ', action.balance)
-      return { ...state, balance: action.balance }
+      return { ...state, balance: action.balance, balanceBlock: action.balanceBlock }
     case 'SET_chainId':
       return { ...state, chainId: action.chainId }
     case 'SET_networkName':
@@ -229,14 +229,10 @@ export const useWeb3Hook = (options?: {
         web3Dispatch({ type: 'SET_currentBlock', currentBlock: blockNumber })
         const updateInterval: number = options?.balanceUpdateInterval ? options.balanceUpdateInterval : 10;
         if (web3State.provider && (blockNumber > web3State.balanceBlock + updateInterval)) {
+          console.log('setBalance', blockNumber, web3State.balanceBlock + updateInterval);
           const _balance = await web3State.provider.getBalance(web3State.account)
           const balance = ethers.utils.formatEther(_balance)
-          web3Dispatch({ type: 'SET_balance', balance: balance })
-        } else {
-          web3Dispatch({
-            type: 'SET_balance',
-            balance: web3InitialState.balance
-          })
+          web3Dispatch({ type: 'SET_balance', balance: balance, balanceBlock: blockNumber })
         }
       }
       provider.on('block', setCurrentBlockAndBalance)
@@ -245,7 +241,7 @@ export const useWeb3Hook = (options?: {
         provider.removeListener('block', setCurrentBlockAndBalance)
       }
     }
-  }, [web3State.currentBlock, web3State.balance])
+  }, [web3State.provider, web3State.currentBlock, web3State.balanceBlock])
 
   // GET netword_name and chainId
   useEffect(() => {
