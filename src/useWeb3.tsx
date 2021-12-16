@@ -219,7 +219,7 @@ export const useWeb3Hook = (options?: {
       })
       web3Dispatch({ type: 'SET_signer', signer: web3State.signer })
     }
-  }, [web3State.account, web3State.chainId])
+  }, [web3State.account, web3State.chainId, web3State.providerUrls, web3State.provider])
 
   useEffect(() => {
     const { provider } = web3State
