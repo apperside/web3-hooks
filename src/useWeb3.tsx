@@ -1,7 +1,7 @@
 // export Web3 provider
 // export useWeb3()
 
-import React, { Reducer, useCallback, useEffect, useReducer } from 'react'
+import React, { Reducer, useCallback, useContext, useEffect, useReducer } from 'react'
 import { BigNumber, ethers } from 'ethers';
 
 import {
@@ -32,7 +32,7 @@ const web3Reducer = (state: Web3State, action: any) => {
   switch (action.type) {
     case 'SET_currentBlock':
       console.log('SET_currentBlock ', action.currentBlock)
-      return { ...state, currentBlock: action.currentBlock}
+      return { ...state, currentBlock: action.currentBlock }
     case 'SET_isWeb3':
       return { ...state, isWeb3: action.isWeb3 }
     case 'SET_isMetaMask':
@@ -83,11 +83,11 @@ type Web3Hook = Web3State & {
 };
 
 // web3 hook
-export const useWeb3 = (options?: {
+export const useWeb3Hook = (options?: {
   pollingInterval: number,
   providerUrls: string[],
   balanceUpdateInterval: number
-}): Web3Hook  => {
+}): Web3Hook => {
   const [web3State, web3Dispatch] = useReducer<Reducer<Web3State, any>>(web3Reducer, web3InitialState)
 
   // login in to MetaMask manually.
@@ -188,7 +188,7 @@ export const useWeb3 = (options?: {
     if (web3State.account !== web3InitialState.account && web3State.provider == undefined) {
       const providers = [];
       if (options !== undefined) {
-        for (let _x = 0; _x < options.providerUrls.length; _x++) {
+        for (let _x = 0;_x < options.providerUrls.length;_x++) {
           const url = options.providerUrls[_x];
           if (url.startsWith('ws')) {
             providers.push(new ethers.providers.WebSocketProvider(url));
@@ -226,8 +226,8 @@ export const useWeb3 = (options?: {
     if (provider) {
       const setCurrentBlockAndBalance = async (blockNumber: number) => {
         console.log('setBlockAndBalance: ', blockNumber);
-        web3Dispatch({type: 'SET_currentBlock', currentBlock: blockNumber})
-        const updateInterval : number = options?.balanceUpdateInterval ? options.balanceUpdateInterval : 10;
+        web3Dispatch({ type: 'SET_currentBlock', currentBlock: blockNumber })
+        const updateInterval: number = options?.balanceUpdateInterval ? options.balanceUpdateInterval : 10;
         if (web3State.provider && (blockNumber > web3State.balanceBlock + updateInterval)) {
           const _balance = await web3State.provider.getBalance(web3State.account)
           const balance = ethers.utils.formatEther(_balance)
@@ -270,16 +270,20 @@ export const useWeb3 = (options?: {
 }
 
 // eslint-disable-next-line no-undef
-type UseWeb3Hook = ReturnType<typeof useWeb3>
+type UseWeb3Hook = ReturnType<typeof useWeb3Hook>
 // Web3 context
 // @ts-ignore
 export const Web3Context = React.createContext<UseWeb3Hook>(null)
 
 // Web3 provider
-export const Web3Provider = ( {children, options}: {children: any, options: any}) => {
+export const Web3Provider = ({ children, options }: { children: any, options: any }) => {
   return (
     <>
-      <Web3Context.Provider value={useWeb3(options)} > {children} </Web3Context.Provider>
+      <Web3Context.Provider value={useWeb3Hook(options)} > {children} </Web3Context.Provider>
     </>
   )
+}
+
+export const useWeb3 = () => {
+  return useContext(Web3Context)
 }
