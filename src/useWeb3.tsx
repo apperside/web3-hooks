@@ -276,10 +276,11 @@ type UseWeb3Hook = ReturnType<typeof useWeb3Hook>
 export const Web3Context = React.createContext<UseWeb3Hook>(null)
 
 // Web3 provider
-export const Web3Provider = ({ children, options }: { children: any, options: any }) => {
+export const Web3Provider = ({ children, options }: { children: any, options?: any }) => {
+  const web3contextValue = useWeb3Hook(options)
   return (
     <>
-      <Web3Context.Provider value={useWeb3Hook(options)} > {children} </Web3Context.Provider>
+      <Web3Context.Provider value={web3contextValue} > {children} </Web3Context.Provider>
     </>
   )
 }
