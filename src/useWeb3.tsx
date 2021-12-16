@@ -1,5 +1,6 @@
 // export Web3 provider
 // export useWeb3()
+
 import React, { Reducer, useCallback, useEffect, useReducer } from 'react'
 import { BigNumber, ethers } from 'ethers';
 
@@ -10,10 +11,7 @@ import {
   loginToMetaMask,
   chainIdtoName
 } from './web3-utils'
-//import AsyncLock from 'async-lock';
-//
-//const lock = new AsyncLock();
-//
+
 export type Web3State = {
   isWeb3: boolean,
   isLogged: boolean,
@@ -22,17 +20,18 @@ export type Web3State = {
   balance: number,
   chainId: number,
   networkName: string & "unknown",
-  pollingInterval: number,
   eth_balance: BigNumber,
   signer?: ethers.providers.JsonRpcSigner,
   provider?: ethers.providers.Web3Provider
   providerUrls: string[],
-  currentBlock: number
+  currentBlock: number,
+  balanceBlock: number
 }
 // web3 reducer
 const web3Reducer = (state: Web3State, action: any) => {
   switch (action.type) {
     case 'SET_currentBlock':
+      console.log('SET_currentBlock ', action.currentBlock)
       return { ...state, currentBlock: action.currentBlock}
     case 'SET_isWeb3':
       return { ...state, isWeb3: action.isWeb3 }
@@ -43,13 +42,6 @@ const web3Reducer = (state: Web3State, action: any) => {
     case 'SET_account':
       return { ...state, account: action.account }
     case 'SET_provider':
-      if (
-        action.provider
-        && action.pollingInterval
-        && action.pollingInterval != action.provider.pollingInterval
-      ) {
-        action.provider.pollingInterval = action.pollingInterval;
-      }
       return {
         ...state,
         provider: action.provider,
@@ -58,22 +50,12 @@ const web3Reducer = (state: Web3State, action: any) => {
     case 'SET_signer':
       return { ...state, signer: action.signer }
     case 'SET_balance':
+      console.log('SET_balance ', action.balance)
       return { ...state, balance: action.balance }
     case 'SET_chainId':
       return { ...state, chainId: action.chainId }
     case 'SET_networkName':
       return { ...state, networkName: action.networkName }
-    case 'SET_pollingInterval':
-    {
-      const newProvider: any = {...state.provider};
-      (newProvider as any).pollingInterval = action.pollingInterval;
-
-      return {
-        ...state,
-        pollingInterval: action.pollingInterval,
-        provider: newProvider
-      };
-    }
     default:
       throw new Error(`Unhandled action ${action.type} in web3Reducer`)
   }
@@ -89,22 +71,22 @@ const web3InitialState: Web3State = {
   chainId: 0,
   networkName: 'unknown',
   eth_balance: ethers.utils.parseEther('0'),
-  pollingInterval: 5000,
   providerUrls: [],
   currentBlock: 0,
+  balanceBlock: 0,
   provider: undefined
 }
 
 type Web3Hook = Web3State & {
   login: () => Promise<void>
-  setPollingInterval: (value: number) => void,
   getCurrentBlock: () => number
 };
 
 // web3 hook
 export const useWeb3 = (options?: {
   pollingInterval: number,
-  providerUrls: string[]
+  providerUrls: string[],
+  balanceUpdateInterval: number
 }): Web3Hook  => {
   const [web3State, web3Dispatch] = useReducer<Reducer<Web3State, any>>(web3Reducer, web3InitialState)
 
@@ -213,7 +195,7 @@ export const useWeb3 = (options?: {
             console.log('Saving WS provider')
           } else if (url.startsWith('http')) {
             const provider = new ethers.providers.JsonRpcProvider(url)
-            provider.pollingInterval = web3State.pollingInterval;
+            provider.pollingInterval = options.pollingInterval;
             providers.push(provider)
             console.log('Saving RPC provider')
           } else {
@@ -240,64 +222,30 @@ export const useWeb3 = (options?: {
   }, [web3State.account, web3State.chainId])
 
   useEffect(() => {
-    if (web3State.pollingInterval != web3InitialState.pollingInterval && web3State.provider) {
-      const provider: any = {...web3State.provider};
-      provider.pollingInterval = web3State.pollingInterval;
-      web3Dispatch({ type: 'SET_provider', provider: provider })
-      const signer = provider.getSigner()
-      web3Dispatch({ type: 'SET_signer', signer: signer })
-    } else {
-      web3Dispatch({
-        type: 'SET_provider',
-        provider: web3InitialState.provider
-      })
-      web3Dispatch({ type: 'SET_signer', signer: web3InitialState.signer })
-    }
-  }, [web3State.pollingInterval])
-
-  // Get amount
-  //useEffect(() => {
-  //  (async () => {
-  //    //console.log('provider:', web3State.provider)
-  //    if (
-  //      web3State.provider &&
-  //      web3State.account !== web3InitialState.account
-  //    ) {
-  //      const _balance = await web3State.provider.getBalance(web3State.account)
-  //      const balance = ethers.utils.formatEther(_balance)
-  //      web3Dispatch({ type: 'SET_balance', balance: balance })
-  //    } else {
-  //      web3Dispatch({
-  //        type: 'SET_balance',
-  //        balance: web3InitialState.balance
-  //      })
-  //    }
-  //  })()
-  //}, [web3State.provider, web3State.account])
-
-  // Listen for balance change for webState.account
-  useEffect(() => {
     const { provider } = web3State
     if (provider) {
-      //console.log('USEFFECT FOR BALANCE CHANGE')
-      //console.log('typeof account:', typeof web3State.account)
-      //console.log('account: ', web3State.account)
-
-      const setCurrentBlock = async (blockNumber: number) => {
-        if (blockNumber <= web3State.currentBlock) {
-          return;
-        }
+      const setCurrentBlockAndBalance = async (blockNumber: number) => {
         console.log('setBlockAndBalance: ', blockNumber);
         web3Dispatch({type: 'SET_currentBlock', currentBlock: blockNumber})
+        const updateInterval : number = options?.balanceUpdateInterval ? options.balanceUpdateInterval : 10;
+        if (web3State.provider && (blockNumber > web3State.balanceBlock + updateInterval)) {
+          const _balance = await web3State.provider.getBalance(web3State.account)
+          const balance = ethers.utils.formatEther(_balance)
+          web3Dispatch({ type: 'SET_balance', balance: balance })
+        } else {
+          web3Dispatch({
+            type: 'SET_balance',
+            balance: web3InitialState.balance
+          })
+        }
       }
-
-      provider.on('block', setCurrentBlock)
+      provider.on('block', setCurrentBlockAndBalance)
 
       return () => {
-        provider.removeListener('block', setCurrentBlock)
+        provider.removeListener('block', setCurrentBlockAndBalance)
       }
     }
-  }, [web3State.provider, web3State.account, web3State.currentBlock])
+  }, [web3State.currentBlock, web3State.balance])
 
   // GET netword_name and chainId
   useEffect(() => {
@@ -314,19 +262,9 @@ export const useWeb3 = (options?: {
     })()
   }, [web3State.provider])
 
-  const setPollingInterval = (value: number) => {
-    web3Dispatch(
-      {
-        type: 'SET_pollingInterval',
-        pollingInterval: value
-      }
-    )
-  }
-
   return {
     ...web3State,
     login,
-    setPollingInterval,
     getCurrentBlock
   } as Web3Hook
 }
