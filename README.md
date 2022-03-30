@@ -1,6 +1,6 @@
 # web3-ts-hooks
 
-> A fork of AbsoluteVirtueXI/web3-ts-hooks with fully typed react hooks for web3
+> A fork of AbsoluteVirtueXI/web3-hooks with fully typed react hooks for web3
 
 [![NPM](https://img.shields.io/npm/v/web3-ts-hooks.svg)](https://www.npmjs.com/package/web3-ts-hooks) [![JavaScript Style Guide](https://img.shields.io/badge/code_style-standard-brightgreen.svg)](https://standardjs.com)
 
